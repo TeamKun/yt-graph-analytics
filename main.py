@@ -4,6 +4,8 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import pandas as pd
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 SCOPES = ['https://www.googleapis.com/auth/yt-analytics.readonly']
 
@@ -29,23 +31,27 @@ if not creds or not creds.valid:
 # Youtube API
 youtubeAnalytics = build(API_SERVICE_NAME, API_VERSION, credentials=creds)
 
-source_data = youtubeAnalytics.reports().query(
+response = youtubeAnalytics.reports().query(
+    ids='channel==MINE',
+    startDate='2020-09-02',
+    endDate='2020-12-14',
     filters='video==tKrUu18hB58',
     metrics='audienceWatchRatio',
     dimensions='elapsedVideoTimeRatio'
-)
+).execute()
 
 # Pandas処理
-df = pd.DataFrame(source_data)
-# # 各動画毎に一意のvideoIdを取得
-# df1 = pd.DataFrame(list(df['id']))['videoId']
-# # 各動画毎に一意のvideoIdを取得必要な動画情報だけ取得
-# df2 = pd.DataFrame(list(df['snippet']))[['channelTitle', 'publishedAt', 'channelId', 'title', 'description']]
-#
-# ddf = pd.concat([df1, df2], axis=1)
-#
-#
-# # 出力
-# ddf.to_csv('output.csv')
+headers = pd.DataFrame(response['columnHeaders'])
+data = pd.DataFrame(response['rows'], columns=headers['name'])
+
+# グラフ
+plt.figure()
+data.plot(x='elapsedVideoTimeRatio')
+plt.savefig('output/graph.png')
+plt.close('all')
+
+# データ
+data.to_csv('output/data.csv')
+
 print('出力完了')
-print(df)
+print(data)
